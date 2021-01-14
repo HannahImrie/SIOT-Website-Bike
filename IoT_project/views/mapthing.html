@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Map!</title>
+
+<link rel='icon' href='favicon.ico' type='/images/favicon.ico'/ >
+<link rel='icon' href='favicon.ico' type='image/x-icon'/ >
+	  <link rel="stylesheet" href="/stylesheets/home.css" />
+	   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+	  	 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+     <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+  </head>
+  <body>
+    <body>
+<div class="topnav">
+  <a class="active" href="/map"><b>Live Map</b></a>
+  <a  href="/livedata"><b>Live Data</b></a>
+
+</div>
+<main class="app">
+	
+
+  <aside class = "sidebar">
+	  <img src="https://i0.wp.com/londonblog.tfl.gov.uk/wp-content/uploads/2019/11/Cycle-the-Sights-Santander-Cycles-docking-station.jpg" width=100% alt="Santander Bike">
+    <div id = "bikes-api" style = "width:100%; height: 50px; position: relative">
+      <style>
+        h1 {text-align: center}
+      </style>
+      <h1> Santander Bike Tracker</h1>
+	  
+	  <div id = "some-text" style="width:80%; height: 10%; position: relative"></div>
+    <div id = "table" style="width:100%; height: 10%; position: relative">
+    <table style="width:100%">
+  <tr>
+    <th><img src="/images/location.png" width=36px alt="Location:"></th>
+    <th id = "location"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/bike.png" height=36px alt="Available Bikes:"></th>
+    <th id = "bikes"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/logout.png" width=36px alt="Available Docks:"></th>
+    <th id = "empty"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/cloud.png" width=36px alt="Weather:"></th>
+    <th id = "weather"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/umbrella.png" width=36px alt="Rain?:"></th>
+    <th id = "rain"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/visibility.png" width=36px alt="Visibility:"></th>
+    <th id = "visibility"></th>
+  </tr>
+  <tr>
+    <th><img src="/images/stopwatch.png" width=36px alt="Last Updated:"></th>
+    <th id = "lastupdated"></th>
+  </tr>
+</table>
+<canvas id="activity_chart" width="400" height="200"></canvas>
+<canvas id="bike_chart" width="400" height="200"></canvas>
+<canvas id="weather_chart" width="400" height="200"></canvas>
+  </div>
+  </aside>
+
+
+  <section class="map-area">
+	  <div id="mapid" style="width:100%; height: 100%; position: relative;"></div>
+		<script>var mymap = L.map('mapid').setView([51.505, -0.09], 13); 
+
+L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+    maxZoom: 18,
+    id: 'mapbox/streets-v11',
+    tileSize: 512,
+    zoomOffset: -1,
+    accessToken: 'pk.eyJ1IjoiaGFubmFoaW1yaWUiLCJhIjoiY2tqZjA5eTVnM2hldjJybnFsMXc0dmgxNCJ9.o1FQe8cDrh1p1POkHKYFXQ'
+}).addTo(mymap);
+
+function getColor(B,E) {
+  B = B[B.length-1]
+  E = E[E.length-1]
+    return  (B > 0 && E > 0)  ? '#20bf55' :
+          (B == 0 && E > 0) ? '#136F63' :
+          (B > 0 && E == 0) ? '#2081c3' :
+                  '#a3bac3' ;
+}
+ 
+var geojsonLayer;
+var LastClickedLayer; 
+
+function highlightandpopulate(e) {
+    var layer = e.target;
+    
+    layer.setStyle({
+      weight: 5,
+      color: '#ff3333',
+      dashArray: '',
+      fillOpacity: 0.7
+    });
+
+    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+      layer.bringToFront();
+    }
+    geojsonLayer.resetStyle(LastClickedLayer);
+    var props = layer.feature.properties
+    document.getElementById("location").innerHTML = '<b>'+ props.name + '</b>';
+    document.getElementById("bikes").innerHTML = '<b> Available Bikes: '+ props.bike[11] + '</b>';
+    document.getElementById("empty").innerHTML = '<b> Available Docks:'+ props.empty[11] + '</b>';
+    document.getElementById("weather").innerHTML = '<b>'+ props.weather[11] + '</b>';
+    document.getElementById("rain").innerHTML = '<b> Rained in the last hour: '+ props.rain + '</b>';
+    document.getElementById("visibility").innerHTML = '<b> Visibility: '+ props.visibility[11] + '</b>';
+    document.getElementById("lastupdated").innerHTML = '<b>'+ props.datetime[11] + '</b>';
+    writegraphs(props)
+    LastClickedLayer = layer;
+  }
+
+function onEachFeature(feature, layer) {
+    layer.on({
+        click: highlightandpopulate,
+        //mouseout: resetHighlight,
+        //click: zoomToFeature
+    });
+}
+function guesstitle(a,b){
+  return  (a ==b)  ? 'Bike Availability' :
+          (a>b) ? 'More bikes than usual available' :
+                   'Less bikes than usual available';                 
+}
+
+function writegraphs(thing){
+  var time = thing.datetime;
+  var bike = thing.bike;
+  var temp = thing.temp;
+  var feels = thing.feels;
+  var wind = thing.wind;
+  var dow = new Date().getDay();
+  var currenthour = new Date().getHours();
+  var weekly = thing.activity;
+  console.log(currenthour);
+  //console.log(dow)
+  var hour = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var barhour = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  for( var i = 0; i < time.length; i++) {
+    // pass the date at index i into moment
+      hour[i] = time[i].substring(time[i].length - 8, time[i].length-3);
+   // time[i] = moment(time[i])
+  }
+  if (dow == 0) {
+    dow = 6;
+  } else {
+    dow = dow - 1;
+  }
+  barhour[currenthour] = bike[11]
+  console.log(weekly[dow][currenthour])
+  console.log(bike[11])
+  var first
+  var second
+  var dataset1 = { 
+          data: barhour,
+          label:"Live",
+          borderColor: "rgba(255,99,132)",
+          backgroundColor: "rgba(255,99,132, 0.6)",
+        }
+  var dataset2 = { 
+          data: weekly[dow],
+          label:"Predicted",
+          borderColor: "rgba(54, 162, 235, 1)",
+          backgroundColor: "rgba(54, 162, 235, 0.6)",
+        }
+  if (weekly[dow][currenthour]*barhour[currenthour] == 0){ //if either =0
+  first = dataset1
+  second = dataset2
+  } else if (weekly[dow][currenthour] == barhour[currenthour]){
+  weekly[dow][currenthour] = 0
+  first = dataset1
+  second = dataset2
+  } else if (barhour[currenthour] < weekly[dow][currenthour]){
+    first = dataset1
+  second = dataset2
+    weekly[dow][currenthour] = weekly[dow][currenthour] - barhour[currenthour]
+  } else {
+    first = dataset2
+    second = dataset1
+    barhour[currenthour] = barhour[currenthour] - weekly[dow][currenthour]
+  }
+
+
+  var bike_chart = new Chart(document.getElementById("activity_chart"), {
+    type: 'bar',
+    data: {
+      labels: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+      datasets: [first, second],
+    },
+      options: {
+        title:{
+        display: true,
+        text: guesstitle(bike[11], weekly[dow][currenthour])
+      },
+      tooltips: {
+        displayColors: true,
+        callbacks:{
+          mode: 'x',
+        },
+      },
+      scales: {
+        xAxes: [{
+          stacked: true,
+          gridLines: {
+            display: true,
+          }
+        }],
+        yAxes: [{
+          stacked: true,
+          ticks: {
+            beginAtZero: true,
+          },
+          type: 'linear',
+        }]
+      },
+    }
+  });
+
+
+
+  var bike_chart = new Chart(document.getElementById("bike_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { 
+        data: bike,
+        label:"Bikes Available",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)"
+        
+      }],
+  },
+      options:{
+        title:{
+      display: true,
+      text: "Past Bike Availablility"
+    },
+        legend: {
+            display: false
+        },
+      scales:{
+        yAxes: [{
+          ticks: {
+            beginAtZero: true,
+          }
+        }]
+      }
+    }
+  });
+
+  var weather_chart = new Chart(document.getElementById("weather_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { data: temp,
+        label:"Temperature (Celcius)",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)",
+    fill: false
+      },{ 
+        data: feels,
+        label:"Feels Like Temperature (Celcius)",
+        borderColor: "rgba(128, 0, 0, 1)",
+        backgroundColor: "rgba(128, 0, 0, 0.4)",
+    fill: false
+      },{ 
+        data: wind,
+        label:"Wind Speed (m/s)",
+        borderColor: "rgba(255, 153, 0, 1)",
+        backgroundColor: "rgba(255, 153, 0, 0.4)",
+    fill: false
+      }],
+  },
+  options:{
+        title:{
+      display: true,
+      text: "Past Weather Data"
+    }}
+})}  
+fetch('/test'). then(function (response){
+  return response.json();
+}).then (function (obj) {
+  console.log(obj);
+  geojsonLayer = L.geoJson(obj, {
+    style: function(feature) {
+        return {
+          color: getColor(feature.properties.bike,feature.properties.empty)
+        };
+    },
+    pointToLayer: function(feature, latlng) {
+        return new L.CircleMarker(latlng, {
+          radius: 5, 
+          fillOpacity: 0.5,
+        });
+    },
+    onEachFeature: onEachFeature
+});
+
+mymap.addLayer(geojsonLayer);
+}).catch(function (error){
+  console.error('Something went wrong!')
+})
+
+var legend = L.control({position: 'bottomright'});
+
+legend.onAdd = function (map) {
+
+  var div = L.DomUtil.create('div', 'info legend');
+  var categories = ['.   Bikes and Docks Available','.   Only Bikes Available','.   Only Docks Available','.   Broken'];
+  var colourlegend = ['#20bf55','#2081c3','#136F63','#a3bac3' ]
+
+    for (var i = 0; i < categories.length; i++) {
+        div.innerHTML +=
+            '<i style="background:' + colourlegend[i] + '"></i> ' +
+             (categories[i] ? ' '+categories[i] + '<br>' : '+');
+    }
+
+    return div;  
+			
+};
+
+legend.addTo(mymap);
+	  
+	  </script>
+	  
+	  
+  </section>
+
+</main>
+	    </body>
+</html>

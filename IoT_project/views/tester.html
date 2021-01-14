@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Map!</title>
+	  <link rel="stylesheet" href="/stylesheets/home.css" />
+	   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+	   <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+
+  </head>
+<body>
+
+<h1>My First Heading</h1>
+<p>My first paragraph.</p>
+
+<main class="app">
+	
+
+  <aside class = "sidebar">
+  	<canvas id="activity_chart" width="400" height="200"></canvas>
+  	<canvas id="bike_chart" width="400" height="200"></canvas>
+	<canvas id="weather_chart" width="400" height="200"></canvas>
+  </aside>
+
+
+  <section class="map-area">
+  </section>
+<script>
+
+
+fetch('/test')
+. then(function (response){
+  return response.json();
+}).then (function (obj) {
+  console.log(obj);
+  var thing  = obj.features[0].properties;
+  console.log(thing);
+  writegraphs(thing)
+  })
+
+
+function guesstitle(a,b){
+	return  (a ==b)  ? 'Bike Availability' :
+          (a>b) ? 'More bikes than usual available' :
+           				 'Less bikes than usual available';
+                  
+}
+
+function writegraphs(thing){
+  var time = thing.datetime;
+  var bike = thing.bike;
+  var temp = thing.temp;
+  var feels = thing.feels;
+  var wind = thing.wind;
+  var dow = new Date().getDay();
+  var currenthour = new Date().getHours();
+  var weekly = thing.activity;
+  console.log(currenthour);
+  //console.log(dow)
+  var hour = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var barhour = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  for( var i = 0; i < time.length; i++) {
+    // pass the date at index i into moment
+      hour[i] = time[i].substring(time[i].length - 8, time[i].length-3);
+   // time[i] = moment(time[i])
+	}
+	if (dow == 0) {
+		dow = 6;
+	} else {
+		dow = dow - 1;
+	}
+	barhour[currenthour] = bike[11]
+	console.log(weekly[dow][currenthour])
+	console.log(bike[11])
+	var first
+	var second
+	var dataset1 = { 
+	        data: barhour,
+	        label:"Live",
+	        borderColor: "rgba(255,99,132)",
+	        backgroundColor: "rgba(255,99,132, 0.6)",
+	      }
+	var dataset2 = { 
+	        data: weekly[dow],
+	        label:"Predicted",
+	        borderColor: "rgba(54, 162, 235, 1)",
+	        backgroundColor: "rgba(54, 162, 235, 0.6)",
+	      }
+	if (weekly[dow][currenthour]*barhour[currenthour] == 0){ //if either =0
+	first = dataset1
+	second = dataset2
+	} else if (weekly[dow][currenthour] == barhour[currenthour]){
+	weekly[dow][currenthour] = 0
+	first = dataset1
+	second = dataset2
+	} else if (barhour[currenthour] < weekly[dow][currenthour]){
+		first = dataset1
+	second = dataset2
+		weekly[dow][currenthour] = weekly[dow][currenthour] - barhour[currenthour]
+	} else {
+		first = dataset2
+		second = dataset1
+		overlap[currenthour] = overlap[currenthour] - weekly[dow][currenthour]
+	}
+
+
+	var bike_chart = new Chart(document.getElementById("activity_chart"), {
+	  type: 'bar',
+	  data: {
+	    labels: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+	    datasets: [first, second],
+	  },
+	    options: {
+	    	title:{
+	    	display: true,
+	    	text: guesstitle(bike[11], weekly[dow][currenthour])
+	    },
+	    tooltips: {
+	      displayColors: true,
+	      callbacks:{
+	        mode: 'x',
+	      },
+	    },
+	    scales: {
+	      xAxes: [{
+	        stacked: true,
+	        gridLines: {
+	          display: true,
+	        }
+	      }],
+	      yAxes: [{
+	        stacked: true,
+	        ticks: {
+	          beginAtZero: true,
+	        },
+	        type: 'linear',
+	      }]
+	    },
+	  }
+	});
+
+
+
+  var bike_chart = new Chart(document.getElementById("bike_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { 
+        data: bike,
+        label:"Bikes Available",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)"
+        
+      }],
+  },
+      options:{
+      	title:{
+    	display: true,
+    	text: "Past Bike Availablility"
+    },
+      	legend: {
+            display: false
+        },
+			scales:{
+				yAxes: [{
+					ticks: {
+						beginAtZero: true,
+					}
+				}]
+			}
+		}
+	});
+
+  var weather_chart = new Chart(document.getElementById("weather_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { data: temp,
+        label:"Temperature (Celcius)",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)",
+		fill: false
+      },{ 
+        data: feels,
+        label:"Feels Like Temperature (Celcius)",
+        borderColor: "rgba(128, 0, 0, 1)",
+        backgroundColor: "rgba(128, 0, 0, 0.4)",
+		fill: false
+      },{ 
+        data: wind,
+        label:"Wind Speed (m/s)",
+        borderColor: "rgba(255, 153, 0, 1)",
+        backgroundColor: "rgba(255, 153, 0, 0.4)",
+		fill: false
+      }],
+  },
+  options:{
+      	title:{
+    	display: true,
+    	text: "Past Weather Data"
+    }}
+})}
+
+
+
+
+
+</script>
+</body>
+</html>

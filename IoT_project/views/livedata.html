@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Map!</title>
+    <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+	   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+     <link rel="stylesheet" href="/stylesheets/live.css" />
+	   
+
+  </head>
+<body>
+<div class="topnav">
+  <a  href="/map"><b>Live Map</b></a>
+  <a class="active" href="/livedata"><b>Live Data</b></a>
+
+</div>
+
+<main class="app">
+	<aside class = "sidebar"></aside>
+  <aside class = "map-area">
+  <canvas id="activity_chart" width="1200" height="300"></canvas>
+  <canvas id="bike_chart" width="1200" height="300"></canvas>
+  </aside>
+  <aside class = "othersidebar"></aside>
+  
+  
+
+<script>
+
+  fetch('/oneweekofdata')
+. then(function (response){
+  return response.json();
+}).then (function (obj) {
+  console.log(obj);
+  console.log(obj.bikes)
+  writegraphs(obj)
+  })
+
+function writegraphs(thing){
+  var time = thing.time;
+  var date = thing.date;
+  var bike = thing.bikes;
+  var empty = thing.empty;
+  var temp = thing.temp;
+  var feels = thing.feels;
+  var wind = thing.wind;
+  var humidity = thing.humidity;
+  var visibility = thing.visibility;
+
+  
+  let hour = new Array(24); for (let i=0; i<24; ++i) hour[i] = 0;
+  for( var i = 0; i < time.length; i++) {
+    // pass the date at index i into moment
+      //hour[i] = time[i].substring(time[i].length - 8, time[i].length-3);
+   //hour[i] = date[i] + ' ' + time[i]
+   //hour[i] = hour[i].substring(hour[i].length-3)
+   hour[i] = time[i].substring(0,5);
+   visibility[i] = visibility[i]*0.001;
+   humidity[i] = humidity[i]*0.1
+   //console.log(hour)
+  }
+
+
+
+  var bike_chart = new Chart(document.getElementById("activity_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { 
+        data: bike,
+        label:"Bikes Available",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)",
+        fill:false
+        
+      },
+      { 
+        data: empty,
+        label:"Docks Available",
+        borderColor: "rgba(51, 51, 0, 1)",
+        backgroundColor: "rgba(51, 51, 0, 0.4)",
+        fill: false
+      }],
+  },
+      options:{
+        title:{
+      display: true,
+      text: "Past Bike and Dock Availablility For BikePoint 668, Ravenscourt Park Station, Hammersmith"
+    },
+        legend: {
+            display: true
+        },
+      scales:{
+        yAxes: [{
+          ticks: {
+            beginAtZero: true,
+          }
+        }],
+       xAxis :[{
+        type:time,
+        distribution: 'series',
+        time: {
+          unit: 'hour'
+          
+        }
+       }]
+      }
+    }
+  });
+
+   var bike_chart = new Chart(document.getElementById("bike_chart"), {
+  type: 'line',
+  data: {
+    labels: hour,
+    datasets: [
+      { 
+        data: temp,
+        label:"Temperature",
+        borderColor: "rgba(255, 51, 51, 1)",
+        backgroundColor: "rgba(255, 51, 51, 0.4)",
+        fill:false
+        
+      },
+      { 
+        data: feels,
+        label:"Feels Like Temperature",
+        borderColor: "rgba(51, 51, 0, 1)",
+        backgroundColor: "rgba(51, 51, 0, 0.4)",
+        fill: false
+      },{ 
+        data: wind,
+        label:"Wind Speed",
+        borderColor: "rgba(0, 102, 255, 1)",
+        backgroundColor: "rgba(0, 102, 255, 0.4)",
+        fill: false
+      },{ 
+        data: visibility,
+        label:"Visibility * 0.001",
+        borderColor: "rgba(0, 204, 0, 1)",
+        backgroundColor: "rgba(0, 204, 0, 0.4)",
+        fill:false
+        
+      },{ 
+        data: humidity,
+        label:"Humidity * 0.1",
+        borderColor: "rgba(0, 204, 255, 1)",
+        backgroundColor: "rgba(0, 204, 255, 0.4)",
+        fill: false
+      }],
+  },
+      options:{
+        title:{
+      display: true,
+      text: "Past Weather Data For BikePoint 668, Ravenscourt Park Station, Hammersmith "
+    },
+        legend: {
+            display: true
+        },
+      scales:{
+        yAxes: [{
+          ticks: {
+            beginAtZero: true,
+          }
+        }],
+       xAxis :[{
+        type:time,
+        distribution: 'series',
+        time: {
+          unit: 'hour'
+          
+        }
+       }]
+      }
+    }
+  }); 
+  
+}
+
+
+</script>
+</body>
+</html>
