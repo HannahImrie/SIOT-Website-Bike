@@ -10,7 +10,7 @@ async function main(){
      * Connection URI. Update <username>, <password>, and <your-cluster-url> to reflect your cluster.
      * See https://docs.mongodb.com/ecosystem/drivers/node/ for more details
      */
-    const url = "mongodb+srv://HannahUser:Table12House24Basic@hannah-iot-cluster.qwcik.mongodb.net/project1database?retryWrites=true&w=majority";
+    const url = "mongodb+srv://<username>:<password>@hannah-iot-cluster.qwcik.mongodb.net/project1database?retryWrites=true&w=majority";
 
 
     const client = new MongoClient(url);
